@@ -25,6 +25,4 @@ services:
   - type: pserv
     name: nha-nghi-db
     plan: starter
-    region: oregon
-    databaseName: nhanhiyennhi
-    databaseUser: nhanhiyennhi_user 
+    region: oregon 
