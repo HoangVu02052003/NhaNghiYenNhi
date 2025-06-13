@@ -37,18 +37,7 @@ builder.Services.AddCors(options =>
 
 // Configure DbContext
 builder.Services.AddDbContext<MyDbContext>(options =>
-{
-    if (builder.Environment.IsDevelopment())
-    {
-        // Sử dụng SQL Server cho development
-        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
-    }
-    else
-    {
-        // Sử dụng SQLite cho production (Render.com)
-        options.UseSqlite(builder.Configuration.GetConnectionString("SqliteConnection") ?? "Data Source=nhanghi.db");
-    }
-});
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 var app = builder.Build();
 
