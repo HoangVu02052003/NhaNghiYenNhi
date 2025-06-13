@@ -24,9 +24,7 @@ services:
   # PostgreSQL Database Service
   - type: pserv
     name: nha-nghi-db
-    env: docker
     plan: starter
     region: oregon
-    databases:
-      - name: nhanhiyennhi
-        user: nhanhiyennhi_user 
+    databaseName: nhanhiyennhi
+    databaseUser: nhanhiyennhi_user 
