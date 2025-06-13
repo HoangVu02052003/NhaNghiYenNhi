@@ -1,0 +1,316 @@
+@{
+    ViewData["Title"] = "🤖 AI Agent - Trợ lý Thông minh";
+}
+
+<div class="container-fluid" style="height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <div class="row h-100">
+        <div class="col-12">
+            <div class="card shadow-lg" style="height: 95vh; margin: 2.5vh auto; max-width: 1200px; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);">
+                <div class="card-header text-white text-center" style="background: linear-gradient(45deg, #667eea, #764ba2); border-radius: 15px 15px 0 0;">
+                    <h3 class="mb-0">
+                        <i class="fas fa-robot"></i> AI Agent - Trợ lý Thông minh
+                        <br><small style="font-size: 0.7em; opacity: 0.9;">🚀 Có thể tự động thực hiện các tác vụ quản lý</small>
+                    </h3>
+                </div>
+                
+                <div class="card-body d-flex flex-column p-0" style="height: calc(95vh - 100px);">
+                    <!-- Quick Actions -->
+                    <div class="px-3 py-2" style="background: rgba(102, 126, 234, 0.1); border-bottom: 1px solid #e9ecef;">
+                        <div class="row text-center">
+                            <div class="col-2">
+                                <button class="btn btn-outline-primary btn-sm w-100" onclick="sendQuickMessage('Tình hình phòng hiện tại')">
+                                    <i class="fas fa-chart-bar"></i><br><small>Tổng quan</small>
+                                </button>
+                            </div>
+                            <div class="col-2">
+                                <button class="btn btn-outline-success btn-sm w-100" onclick="sendQuickMessage('Đặt phòng số 1')">
+                                    <i class="fas fa-plus-circle"></i><br><small>Đặt phòng</small>
+                                </button>
+                            </div>
+                            <div class="col-2">
+                                <button class="btn btn-outline-info btn-sm w-100" onclick="sendQuickMessage('Phòng 1 mua nước ngọt')">
+                                    <i class="fas fa-shopping-cart"></i><br><small>Mua sản phẩm</small>
+                                </button>
+                            </div>
+                            <div class="col-2">
+                                <button class="btn btn-outline-warning btn-sm w-100" onclick="sendQuickMessage('Trả phòng số 1')">
+                                    <i class="fas fa-sign-out-alt"></i><br><small>Trả phòng</small>
+                                </button>
+                            </div>
+                            <div class="col-2">
+                                <button class="btn btn-outline-secondary btn-sm w-100" onclick="sendQuickMessage('Dọn phòng số 1')">
+                                    <i class="fas fa-broom"></i><br><small>Dọn dẹp</small>
+                                </button>
+                            </div>
+                            <div class="col-2">
+                                <button class="btn btn-outline-dark btn-sm w-100" onclick="sendQuickMessage('Có sản phẩm gì')">
+                                    <i class="fas fa-search"></i><br><small>Tìm SP</small>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chat Area -->
+                    <div class="flex-grow-1 p-3" style="overflow-y: auto; background: #f8f9fa;">
+                        <div id="chatMessages">
+                            <div class="message assistant-message">
+                                <div class="message-content">
+                                    <strong>🤖 AI Agent:</strong> Chào Cô Chủ! Em là trợ lý AI thông minh. Em có thể:
+                                    <br>• ✅ <strong>Tự động đặt phòng:</strong> "Đặt phòng số 1 cho Nguyễn Văn A"
+                                    <br>• 🛒 <strong>Tự động order sản phẩm:</strong> "Phòng 2 mua nước ngọt 3 chai"
+                                    <br>• 💰 <strong>Tự động trả phòng:</strong> "Trả phòng số 3"
+                                    <br>• 🧹 <strong>Tự động cập nhật dọn dẹp:</strong> "Dọn phòng số 4"
+                                    <br>• 📊 <strong>Báo cáo thông minh:</strong> "Tình hình kinh doanh hôm nay"
+                                    <br><br><em>Cô Chủ cứ yêu cầu, em sẽ tự động thực hiện!</em>
+                                </div>
+                                <div class="message-time">Bây giờ</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Input Area -->
+                    <div class="p-3" style="background: white; border-top: 1px solid #dee2e6;">
+                        <div class="input-group">
+                            <input type="text" id="messageInput" class="form-control" 
+                                   placeholder="🗣️ Cô Chủ yêu cầu gì? (VD: Đặt phòng số 1, Phòng 2 mua nước...)" 
+                                   style="border-radius: 25px 0 0 25px; border: 2px solid #667eea;">
+                            <button class="btn" id="sendButton" type="button" onclick="sendMessage()" 
+                                    style="background: linear-gradient(45deg, #667eea, #764ba2); color: white; border-radius: 0 25px 25px 0; border: 2px solid #667eea;">
+                                <i class="fas fa-paper-plane"></i> Gửi
+                            </button>
+                        </div>
+                        <div class="text-center mt-2">
+                            <small class="text-muted">
+                                <i class="fas fa-magic"></i> AI Agent sẽ tự động thực hiện lệnh của Cô Chủ
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .message {
+        margin-bottom: 15px;
+        animation: fadeInUp 0.3s ease;
+    }
+
+    .user-message {
+        text-align: right;
+    }
+
+    .user-message .message-content {
+        display: inline-block;
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        color: white;
+        padding: 12px 18px;
+        border-radius: 20px 20px 5px 20px;
+        max-width: 70%;
+        word-wrap: break-word;
+        box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+    }
+
+    .assistant-message .message-content {
+        display: inline-block;
+        background: white;
+        color: #333;
+        padding: 12px 18px;
+        border-radius: 20px 20px 20px 5px;
+        max-width: 80%;
+        word-wrap: break-word;
+        border: 2px solid #e9ecef;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .message-time {
+        font-size: 0.7em;
+        color: #666;
+        margin-top: 5px;
+    }
+
+    .typing-indicator {
+        display: none;
+        text-align: left;
+        margin-bottom: 15px;
+    }
+
+    .typing-indicator .message-content {
+        display: inline-block;
+        background: #f1f3f4;
+        color: #666;
+        padding: 12px 18px;
+        border-radius: 20px 20px 20px 5px;
+        border: 2px solid #e9ecef;
+    }
+
+    .typing-dots {
+        display: inline-block;
+    }
+
+    .typing-dots span {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #999;
+        animation: typing 1.4s infinite ease-in-out;
+        margin: 0 1px;
+    }
+
+    .typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+    @@keyframes typing {
+        0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+        40% { transform: scale(1); opacity: 1; }
+    }
+
+    @@keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    #messageInput {
+        transition: all 0.3s ease;
+    }
+
+    #messageInput:focus {
+        outline: none;
+        border-color: #764ba2 !important;
+        box-shadow: 0 0 15px rgba(102, 126, 234, 0.3) !important;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+        transition: all 0.3s ease;
+    }
+</style>
+
+<script>
+    function sendMessage() {
+        const messageInput = document.getElementById('messageInput');
+        const message = messageInput.value.trim();
+        
+        if (message === '') return;
+
+        addUserMessage(message);
+        messageInput.value = '';
+        showTypingIndicator();
+
+        fetch('/ChatbotAgent/SendMessage', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message: message })
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideTypingIndicator();
+            if (data.success) {
+                addAssistantMessage(data.response);
+            } else {
+                addAssistantMessage('❌ Xin lỗi, có lỗi xảy ra: ' + data.error);
+            }
+        })
+        .catch(error => {
+            hideTypingIndicator();
+            addAssistantMessage('❌ Lỗi kết nối: ' + error.message);
+        });
+    }
+
+    function sendQuickMessage(message) {
+        document.getElementById('messageInput').value = message;
+        sendMessage();
+    }
+
+    function addUserMessage(message) {
+        const chatMessages = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message user-message';
+        messageDiv.innerHTML = `
+            <div class="message-content">
+                <strong>👩‍💼 Cô Chủ:</strong> ${escapeHtml(message)}
+            </div>
+            <div class="message-time">${getCurrentTime()}</div>
+        `;
+        chatMessages.appendChild(messageDiv);
+        scrollToBottom();
+    }
+
+    function addAssistantMessage(message) {
+        const chatMessages = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message assistant-message';
+        
+        // Format message để hiển thị emoji và line breaks
+        const formattedMessage = message
+            .replace(/\n/g, '<br>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>');
+        
+        messageDiv.innerHTML = `
+            <div class="message-content">
+                <strong>🤖 AI Agent:</strong> ${formattedMessage}
+            </div>
+            <div class="message-time">${getCurrentTime()}</div>
+        `;
+        chatMessages.appendChild(messageDiv);
+        scrollToBottom();
+    }
+
+    function showTypingIndicator() {
+        const chatMessages = document.getElementById('chatMessages');
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'typing-indicator';
+        typingDiv.id = 'typingIndicator';
+        typingDiv.innerHTML = `
+            <div class="message-content">
+                🤖 AI Agent đang xử lý <div class="typing-dots"><span></span><span></span><span></span></div>
+            </div>
+        `;
+        chatMessages.appendChild(typingDiv);
+        typingDiv.style.display = 'block';
+        scrollToBottom();
+    }
+
+    function hideTypingIndicator() {
+        const typingIndicator = document.getElementById('typingIndicator');
+        if (typingIndicator) {
+            typingIndicator.remove();
+        }
+    }
+
+    function scrollToBottom() {
+        const chatMessages = document.getElementById('chatMessages');
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function getCurrentTime() {
+        return new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Enter key to send message
+    document.getElementById('messageInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
+
+    // Auto focus on input
+    document.getElementById('messageInput').focus();
+</script> 

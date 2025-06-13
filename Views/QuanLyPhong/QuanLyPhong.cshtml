@@ -1,0 +1,1097 @@
+@{
+    ViewData["Title"] = "Quản Lý Phòng";
+}
+
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+
+<div class="room-management-container">
+    <div class="view-controls mb-4" data-aos="fade-up">
+        <h2 class="text-center mb-4" data-aos="fade-down">
+            <i class="fas fa-building"></i> Sơ Đồ Phòng
+        </h2>
+        <div class="d-flex justify-content-center gap-2">
+            <button class="btn btn-primary" onclick="toggleView('3d')">
+                <i class="fas fa-cube"></i> Xem 3D
+            </button>
+            <button class="btn btn-secondary" onclick="toggleView('2d')">
+                <i class="fas fa-th"></i> Xem 2D
+            </button>
+            <button class="btn btn-warning btn-sm" onclick="testSignalR()">
+                <i class="fas fa-bell"></i> Test SignalR
+            </button>
+        </div>
+    </div>
+
+    <div class="room-scene" id="roomScene"></div>
+    
+    <div class="rooms-container" data-aos="fade-up" data-aos-delay="200">
+        <div class="rooms-row" id="topRow"></div>
+        <div class="rooms-row" id="bottomRow"></div>
+    </div>
+</div>
+
+<!-- Room Modal -->
+<div class="modal fade" id="roomModal" tabindex="-1" aria-labelledby="roomModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="roomModalLabel">
+                    <i class="fas fa-door-open"></i> Chi Tiết Phòng
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="modalContent"></div>
+        </div>
+    </div>
+</div>
+
+<!-- QR Scanner Modal -->
+<div class="modal fade" id="qrScannerModal" tabindex="-1" aria-labelledby="qrScannerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="qrScannerModalLabel">
+                    <i class="fas fa-qrcode"></i> Quét QR Code CCCD
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="stopQRScanner()"></button>
+            </div>
+            <div class="modal-body">
+                <div class="qr-scanner-container">
+                    <div class="scanner-info mb-3">
+                        <p class="text-info">
+                            <i class="fas fa-info-circle"></i> 
+                            Hướng QR code trên CCCD vào camera để quét thông tin khách hàng
+                        </p>
+                    </div>
+                    <div class="scanner-video-container">
+                        <div id="qrScannerVideo" class="scanner-video"></div>
+                    </div>
+                    <div class="scanner-status mt-3">
+                        <div id="scannerStatus" class="text-center">
+                            <i class="fas fa-camera"></i> Đang khởi động camera...
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="stopQRScanner()" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Đóng
+                </button>
+                <button type="button" class="btn btn-info" onclick="toggleFlashlight()" id="flashlightBtn" style="display: none;">
+                    <i class="fas fa-flashlight"></i> Bật/Tắt đèn pin
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Order Notification Modal -->
+<div class="modal fade" id="orderNotificationModal" tabindex="-1" aria-labelledby="orderNotificationModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="orderNotificationModalLabel">
+                    <i class="fas fa-utensils"></i> Thông Báo Đặt Món
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-map-marker-alt"></i> Phòng: <span id="orderRoomName"></span></h6>
+                </div>
+                <div class="order-details">
+                    <h6>Chi tiết đơn hàng:</h6>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Tên món</th>
+                                    <th>Số lượng</th>
+                                    <th>Đơn giá</th>
+                                    <th>Thành tiền</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orderDetailsTable">
+                                <!-- Nội dung được thêm bằng JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-end">
+                        <strong>Tổng tiền: <span id="totalAmount" class="text-primary"></span> VNĐ</strong>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Từ chối
+                </button>
+                <button type="button" class="btn btn-success" id="confirmOrderBtn">
+                    <i class="fas fa-check"></i> Xác nhận đặt món
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .room-management-container {
+            position: relative;
+            min-height: 80vh;
+            perspective: 1000px;
+            background: var(--background-color);
+            overflow: hidden;
+            padding: 20px;
+        }
+
+        .room-scene {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 1;
+            display: none;
+            opacity: 0;
+            background: var(--background-color);
+            transition: opacity 0.3s ease;
+        }
+
+        .room-scene canvas {
+            width: 100% !important;
+            height: 100% !important;
+            display: block;
+        }
+
+        .view-controls {
+            position: relative;
+            z-index: 3;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+            backdrop-filter: blur(4px);
+            margin-bottom: 30px;
+        }
+
+        .rooms-container {
+            position: relative;
+            z-index: 2;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            transform-style: preserve-3d;
+            transition: opacity 0.3s ease;
+            display: block;
+            opacity: 1;
+        }
+
+        .rooms-row {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .room {
+            width: 180px;
+            height: 140px;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 15px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(5px);
+            transform-style: preserve-3d;
+        }
+
+        .room::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, rgba(255,255,255,0.1), rgba(255,255,255,0));
+            z-index: 1;
+        }
+
+        .room i {
+            font-size: 28px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 2;
+        }
+
+        .room span:not(.status-badge) {
+            position: relative;
+            z-index: 2;
+            margin-bottom: 25px;
+        }
+
+        .room.red {
+            background: linear-gradient(145deg, #ff6b6b, #f53e3e);
+            transform: translateZ(10px);
+        }
+
+        .room.green {
+            background: linear-gradient(145deg, #51cf66, #37b24d);
+            transform: translateZ(10px);
+        }
+
+        .room.yellow {
+            background: linear-gradient(145deg, #ffd43b, #fab005);
+            transform: translateZ(10px);
+        }
+
+        .room:hover {
+            transform: translateY(-5px) translateZ(20px) rotateX(10deg);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+        }
+
+        .room:hover i {
+            transform: scale(1.2) translateZ(10px);
+        }
+
+        .room::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                to bottom right,
+                rgba(255, 255, 255, 0.2),
+                rgba(255, 255, 255, 0.05)
+            );
+            transform: rotate(45deg);
+            z-index: 0;
+            transition: all 0.6s ease;
+        }
+
+        .room:hover::after {
+            transform: rotate(45deg) translate(50%, 50%);
+        }
+
+        .status-badge {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.85em;
+            background: rgba(255, 255, 255, 0.25);
+            padding: 4px 12px;
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+            white-space: nowrap;
+            z-index: 2;
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1040;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.5);
+            pointer-events: auto;
+        }
+
+        .modal-backdrop.show {
+            opacity: 0.5;
+        }
+
+        /* Ensure only one backdrop is visible */
+        .modal-backdrop:not(:first-of-type) {
+            display: none !important;
+        }
+
+        /* Modal Styles */
+        .modal {
+            background: transparent !important;
+            z-index: 1055 !important;
+        }
+
+        .modal-dialog {
+            z-index: 1060 !important;
+            max-height: 90vh;
+            margin: 1.75rem auto;
+        }
+
+        .modal-dialog-scrollable .modal-content {
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .modal-body {
+            max-height: 60vh;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        /* Specific fixes for long modals */
+        .modal-dialog.modal-lg {
+            max-height: 90vh;
+        }
+
+        .modal-dialog.modal-lg .modal-body {
+            max-height: 65vh;
+            overflow-y: auto;
+        }
+
+        /* Table responsiveness inside modals */
+        .modal-body .table-responsive {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+        }
+
+        /* Custom scrollbar styling */
+        .modal-body::-webkit-scrollbar,
+        .table-responsive::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .modal-body::-webkit-scrollbar-track,
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb,
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 10px;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb:hover,
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* Ensure modal footer stays at bottom */
+        .modal-content {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-body {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .modal-footer {
+            flex-shrink: 0;
+        }
+
+        .modal-content {
+            background: rgba(255, 255, 255, 0.95);
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 15px 15px 0 0;
+        }
+
+        .modal-header .btn-close {
+            filter: brightness(0) invert(1);
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-footer {
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 0 0 15px 15px;
+        }
+
+        .form-control, .form-select {
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 8px;
+            padding: 10px 15px;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(52,152,219,0.2);
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @@keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .room-3d {
+            transform-style: preserve-3d;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @@keyframes float {
+            0%, 100% { transform: translateY(0) rotateX(10deg); }
+            50% { transform: translateY(-20px) rotateX(15deg); }
+        }
+
+        @@media (max-width: 768px) {
+            .rooms-row {
+                gap: 15px;
+            }
+
+            .room {
+                width: 150px;
+                height: 120px;
+            }
+        }
+
+        @@media (max-width: 576px) {
+            .room {
+                width: 130px;
+                height: 100px;
+            }
+
+            .room i {
+                font-size: 24px;
+            }
+        }
+
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0);
+            z-index: 1040;
+            transition: background-color 0.3s ease;
+        }
+
+        .custom-modal-overlay.show {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal {
+            z-index: 1050;
+        }
+
+        .modal-content {
+            transform: scale(0.8);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .modal.show .modal-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        /* Multiple Modal Support */
+        .modal:nth-of-type(2) {
+            background: rgba(0, 0, 0, 0.3) !important;
+        }
+
+        .modal + .modal-backdrop {
+            opacity: 0.2;
+        }
+
+        #purchaseModal .modal-dialog {
+            max-width: 800px;
+        }
+
+        #purchaseModal .modal-content {
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        /* Purchase Modal Specific Styles */
+        .purchase-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 20px 0;
+        }
+
+        .purchase-card {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+
+        .purchase-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .purchase-image {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+
+        .purchase-info {
+            padding: 15px;
+        }
+
+        .product-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .product-price {
+            color: #e74c3c;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .quantity-control {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .quantity-control button {
+            width: 30px;
+            height: 30px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            background: #f8f9fa;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .quantity-control button:hover {
+            background: #e9ecef;
+            border-color: #adb5bd;
+        }
+
+        .quantity-control input {
+            width: 50px;
+            text-align: center;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 5px;
+        }
+
+        .quantity-control .btn-primary {
+            width: auto;
+            height: auto;
+            padding: 5px 10px;
+            margin-left: 5px;
+        }
+
+        /* QR Scanner Styles */
+        .qr-scanner-container {
+            padding: 20px 0;
+        }
+
+        .scanner-video-container {
+            position: relative;
+            max-width: 500px;
+            margin: 0 auto;
+            border-radius: 15px;
+            overflow: hidden;
+            background: #000;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            min-height: 350px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .scanner-video {
+            width: 100% !important;
+            height: auto !important;
+            display: block !important;
+            min-height: 300px;
+            border-radius: 15px;
+        }
+
+        /* Html5Qrcode specific styles */
+        #qrScannerVideo video {
+            width: 100% !important;
+            height: auto !important;
+            border-radius: 15px;
+        }
+
+        #qrScannerVideo canvas {
+            display: none !important; /* Hide the overlay canvas for cleaner look */
+        }
+
+        #qrScannerVideo {
+            width: 100%;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .scanner-info {
+            text-align: center;
+            background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #2196f3;
+        }
+
+        .scanner-status {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #dee2e6;
+        }
+
+        .scanner-status i {
+            margin-right: 8px;
+        }
+
+        #qrScannerModal .modal-content {
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        #qrScannerModal .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+
+        #qrScannerModal .modal-header .btn-close {
+            filter: brightness(0) invert(1);
+        }
+
+        /* QR Scan Button Styles */
+        .qr-scan-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+            padding: 8px 15px;
+            color: white;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+            margin-left: 10px;
+        }
+
+        .qr-scan-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        .qr-scan-button i {
+            margin-right: 5px;
+        }
+    </style>
+}
+
+@section Scripts {
+    <!-- QR Code Scanner Libraries - Using html5-qrcode instead -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <!-- SignalR từ CDN -->
+    <script src="https://unpkg.com/@@microsoft/signalr@latest/dist/browser/signalr.js"></script>
+    
+    <script src="~/js/QuanLyPhongJS.js?v=@DateTime.Now.Ticks" asp-append-version="true"></script>
+    <script>
+        // Initialize when document is ready
+        $(document).ready(function() {
+            // Initialize datepicker
+            $(document).on('focus', 'input[name="ngaySinh"]', function() {
+                $(this).datepicker({
+                    format: 'dd/mm/yyyy',
+                    language: 'vi',
+                    autoclose: true,
+                    todayHighlight: true,
+                    orientation: 'bottom'
+                });
+            });
+
+            // Initialize AOS
+            AOS.init({
+                duration: 1000,
+                once: true,
+                mirror: true
+            });
+
+            // Initialize rooms
+            renderRooms();
+
+            // Initialize SignalR connection
+            initializeSignalR();
+            
+            // Check mobile audio support
+            checkMobileAudioSupport();
+        });
+
+        // SignalR Connection và Order Management
+        let currentOrderData = null;
+        
+        function initializeSignalR() {
+            if (typeof signalR === 'undefined') {
+                console.error("SignalR library not loaded!");
+                setTimeout(initializeSignalR, 1000); // Retry after 1 second
+                return;
+            }
+
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/orderHub")
+                .withAutomaticReconnect()
+                .configureLogging(signalR.LogLevel.Information)
+                .build();
+
+            connection.start().then(function () {
+                console.log("✅ SignalR connection started for QuanLyPhong");
+                // Join group QuanLyPhong
+                connection.invoke("JoinQuanLyPhongGroup").then(function() {
+                    console.log("✅ Successfully joined QuanLyPhong group");
+                }).catch(function (err) {
+                    console.error("❌ Error joining QuanLyPhong group: ", err);
+                });
+            }).catch(function (err) {
+                console.error("❌ SignalR connection error: ", err);
+                setTimeout(initializeSignalR, 2000); // Retry after 2 seconds
+            });
+
+            // Nhận thông báo đặt món
+            connection.on("ReceiveOrderNotification", function (phongId, tenSanPham, soLuong, tenPhong, gia, sanPhamId, thongBao) {
+                console.log("🔔 Received order notification:", {
+                    phongId, tenSanPham, soLuong, tenPhong, gia, sanPhamId, thongBao
+                });
+                showOrderNotification(phongId, tenSanPham, soLuong, tenPhong, gia, sanPhamId);
+                playNotificationSound();
+                speakVietnamese(thongBao); // Đọc thông báo bằng tiếng Việt AI
+            });
+
+            // Nhận xác nhận đơn hàng
+            connection.on("OrderConfirmed", function (phongId, sanPhamId, soLuong, tenPhong) {
+                console.log(`Đơn hàng từ phòng ${tenPhong} đã được xác nhận`);
+                // Có thể thêm thông báo hoặc cập nhật UI ở đây
+                renderRooms(); // Cập nhật lại danh sách phòng
+            });
+
+            window.orderConnection = connection;
+        }
+
+        function testSignalR() {
+            console.log("🧪 Testing SignalR connection...");
+            if (window.orderConnection && window.orderConnection.state === signalR.HubConnectionState.Connected) {
+                console.log("✅ SignalR is connected");
+                // Test với dữ liệu giả
+                showOrderNotification(1, "Phở Bò", 2, "Phòng Số 1", 50000, 1);
+                playNotificationSound();
+                speakVietnamese("Test thông báo đặt món từ phòng số 1");
+            } else {
+                console.log("❌ SignalR is not connected");
+                alert("SignalR chưa kết nối! Kiểm tra console để xem lỗi.");
+            }
+        }
+
+        function showOrderNotification(phongId, tenSanPham, soLuong, tenPhong, gia, sanPhamId) {
+            // Lưu thông tin đơn hàng
+            currentOrderData = {
+                phongId: phongId,
+                sanPhamId: sanPhamId,
+                tenSanPham: tenSanPham,
+                soLuong: soLuong,
+                gia: gia,
+                tenPhong: tenPhong
+            };
+
+            // Hiển thị modal
+            document.getElementById('orderRoomName').textContent = tenPhong;
+            
+            // Tạo nội dung bảng
+            const tableBody = document.getElementById('orderDetailsTable');
+            const thanhTien = gia * soLuong;
+            
+            tableBody.innerHTML = `
+                <tr>
+                    <td>${tenSanPham}</td>
+                    <td>${soLuong}</td>
+                    <td>${gia.toLocaleString('vi-VN')} VNĐ</td>
+                    <td>${thanhTien.toLocaleString('vi-VN')} VNĐ</td>
+                </tr>
+            `;
+            
+            document.getElementById('totalAmount').textContent = thanhTien.toLocaleString('vi-VN');
+            
+            // Hiển thị modal
+            const modal = new bootstrap.Modal(document.getElementById('orderNotificationModal'));
+            modal.show();
+        }
+
+        function playNotificationSound() {
+            try {
+                // Kiểm tra hỗ trợ trên mobile
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                
+                // Yêu cầu user interaction cho mobile
+                if (isMobile && !window.audioContextUnlocked) {
+                    console.log("📱 Mobile detected - audio context needs user interaction");
+                }
+                
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Tạo âm thanh thông báo kiểu chuông điện thoại Việt Nam
+                const sequences = [
+                    { freq: 440, duration: 0.4 },  // La
+                    { freq: 0, duration: 0.1 },    // Nghỉ
+                    { freq: 523, duration: 0.4 },  // Đồ
+                    { freq: 0, duration: 0.1 },    // Nghỉ
+                    { freq: 659, duration: 0.4 },  // Mi
+                    { freq: 0, duration: 0.3 }     // Nghỉ dài
+                ];
+                
+                let currentTime = audioContext.currentTime;
+                
+                sequences.forEach((note) => {
+                    if (note.freq > 0) {
+                        const oscillator = audioContext.createOscillator();
+                        const gainNode = audioContext.createGain();
+                        
+                        oscillator.connect(gainNode);
+                        gainNode.connect(audioContext.destination);
+                        
+                        oscillator.frequency.setValueAtTime(note.freq, currentTime);
+                        oscillator.type = 'sine';
+                        
+                        gainNode.gain.setValueAtTime(0, currentTime);
+                        gainNode.gain.linearRampToValueAtTime(0.4, currentTime + 0.05);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, currentTime + note.duration);
+                        
+                        oscillator.start(currentTime);
+                        oscillator.stop(currentTime + note.duration);
+                    }
+                    currentTime += note.duration;
+                });
+                
+                // Lặp lại 1 lần nữa
+                if (!window.notificationPlaying) {
+                    window.notificationPlaying = true;
+                    setTimeout(() => {
+                        try {
+                            const audioContext2 = new (window.AudioContext || window.webkitAudioContext)();
+                            sequences.forEach((note) => {
+                                if (note.freq > 0) {
+                                    const oscillator = audioContext2.createOscillator();
+                                    const gainNode = audioContext2.createGain();
+                                    
+                                    oscillator.connect(gainNode);
+                                    gainNode.connect(audioContext2.destination);
+                                    
+                                    oscillator.frequency.setValueAtTime(note.freq, audioContext2.currentTime);
+                                    oscillator.type = 'sine';
+                                    
+                                    gainNode.gain.setValueAtTime(0, audioContext2.currentTime);
+                                    gainNode.gain.linearRampToValueAtTime(0.4, audioContext2.currentTime + 0.05);
+                                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext2.currentTime + note.duration);
+                                    
+                                    oscillator.start(audioContext2.currentTime);
+                                    oscillator.stop(audioContext2.currentTime + note.duration);
+                                }
+                            });
+                        } catch (e) {}
+                        
+                        setTimeout(() => {
+                            window.notificationPlaying = false;
+                        }, 2000);
+                    }, 1200);
+                }
+                
+            } catch (error) {
+                console.warn("Không thể phát âm thanh:", error);
+            }
+        }
+
+        function speakVietnamese(text) {
+            try {
+                if ('speechSynthesis' in window) {
+                    const speak = () => {
+                        const utterance = new SpeechSynthesisUtterance(text);
+                        utterance.lang = 'vi-VN';
+                        utterance.rate = 0.9;
+                        utterance.pitch = 1.0;
+                        utterance.volume = 0.8;
+                        
+                        // Tìm giọng tiếng Việt
+                        const voices = speechSynthesis.getVoices();
+                        const vietnameseVoice = voices.find(voice => 
+                            voice.lang.includes('vi') || 
+                            voice.name.toLowerCase().includes('vietnam') ||
+                            voice.name.toLowerCase().includes('vietnamese') ||
+                            voice.name.toLowerCase().includes('linh')
+                        );
+                        
+                        if (vietnameseVoice) {
+                            utterance.voice = vietnameseVoice;
+                            console.log("Sử dụng giọng tiếng Việt:", vietnameseVoice.name);
+                        } else {
+                            console.log("Không tìm thấy giọng tiếng Việt, sử dụng giọng mặc định");
+                        }
+                        
+                        speechSynthesis.speak(utterance);
+                    };
+                    
+                    // Đảm bảo voices đã được load
+                    if (speechSynthesis.getVoices().length === 0) {
+                        speechSynthesis.addEventListener('voiceschanged', speak, { once: true });
+                    } else {
+                        speak();
+                    }
+                } else {
+                    console.warn("Trình duyệt không hỗ trợ Text-to-Speech");
+                }
+            } catch (error) {
+                console.warn("Không thể đọc văn bản:", error);
+            }
+        }
+
+        // Xử lý xác nhận đặt món
+        document.getElementById('confirmOrderBtn').addEventListener('click', function() {
+            if (!currentOrderData) return;
+            
+            console.log("🔄 Confirming order:", currentOrderData);
+            
+            fetch('/Menu/XacNhanDatMon', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    phongId: currentOrderData.phongId,
+                    sanPhamId: currentOrderData.sanPhamId,
+                    soLuong: currentOrderData.soLuong
+                })
+            })
+            .then(response => {
+                console.log("📥 Response status:", response.status);
+                
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        console.error("❌ Server error response:", text);
+                        throw new Error(`Server error: ${response.status}`);
+                    });
+                }
+                
+                return response.json();
+            })
+            .then(data => {
+                console.log("✅ Order confirmation result:", data);
+                
+                if (data.success) {
+                    // Đóng modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('orderNotificationModal'));
+                    modal.hide();
+                    
+                    // Hiển thị thông báo thành công
+                    alert(data.message || `Đã xác nhận đơn hàng từ phòng ${currentOrderData.tenPhong}`);
+                    
+                    // Reset dữ liệu
+                    currentOrderData = null;
+                } else {
+                    alert(data.message || 'Có lỗi xảy ra khi xác nhận đơn hàng');
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error confirming order:', error);
+                alert('Có lỗi xảy ra khi xác nhận đơn hàng: ' + error.message);
+            });
+        });
+
+        // Unlock audio context cho mobile
+        function unlockAudioContext() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume().then(() => {
+                        console.log("🔓 Audio context unlocked for mobile");
+                        window.audioContextUnlocked = true;
+                    });
+                } else {
+                    window.audioContextUnlocked = true;
+                }
+            } catch (e) {
+                console.warn("Failed to unlock audio context:", e);
+            }
+        }
+
+        // Unlock audio khi user tương tác lần đầu (cho mobile)
+        ['touchstart', 'touchend', 'mousedown', 'keydown'].forEach(event => {
+            document.addEventListener(event, unlockAudioContext, { once: true });
+        });
+
+        // Kiểm tra hỗ trợ âm thanh trên mobile
+        function checkMobileAudioSupport() {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            if (isMobile) {
+                console.log("📱 Thiết bị mobile được phát hiện");
+                
+                // Kiểm tra Web Audio API
+                const hasWebAudio = !!(window.AudioContext || window.webkitAudioContext);
+                
+                // Kiểm tra Speech Synthesis API
+                const hasSpeechSynthesis = 'speechSynthesis' in window;
+                
+                console.log("🔊 Hỗ trợ âm thanh:", {
+                    webAudio: hasWebAudio,
+                    speechSynthesis: hasSpeechSynthesis
+                });
+                
+                if (!hasWebAudio && !hasSpeechSynthesis) {
+                    console.warn("⚠️ Thiết bị không hỗ trợ âm thanh thông báo");
+                } else {
+                    console.log("✅ Thiết bị hỗ trợ âm thanh thông báo - cần tương tác để kích hoạt");
+                }
+            }
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            if (window.renderer && window.camera) {
+                const container = document.getElementById('roomScene');
+                window.camera.aspect = container.clientWidth / container.clientHeight;
+                window.camera.updateProjectionMatrix();
+                window.renderer.setSize(container.clientWidth, container.clientHeight);
+            }
+        });
+    </script>
+}

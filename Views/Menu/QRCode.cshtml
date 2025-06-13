@@ -1,0 +1,154 @@
+@{
+    ViewData["Title"] = "QR Code Menu";
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header text-center bg-primary text-white">
+                    <h4><i class="fas fa-qrcode"></i> QR Code Menu - @ViewBag.TenPhong</h4>
+                    <small><i class="fas fa-server"></i> Server IP: @ViewBag.ServerIP:5157</small>
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <p class="text-muted">Quét mã QR này để truy cập menu đặt món cho phòng</p>
+                    </div>
+                    
+                    <!-- QR Code sẽ được tạo ở đây -->
+                    <div id="qrcode" class="d-flex justify-content-center mb-3"></div>
+                    
+                    <div class="alert alert-info">
+                        <small>
+                            <strong>🌐 URL Menu:</strong><br>
+                            <span class="text-break">@ViewBag.MenuUrl</span><br><br>
+                            <strong>📱 Hướng dẫn:</strong><br>
+                            • Quét QR bằng camera điện thoại<br>
+                            • Hoặc truy cập trực tiếp URL trên<br>
+                            • Đảm bảo điện thoại cùng mạng WiFi
+                        </small>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-6">
+                            <a href="@Url.Action("Index", new { phongId = ViewBag.PhongId })" 
+                               class="btn btn-success btn-sm">
+                                <i class="fas fa-utensils"></i> Xem Menu
+                            </a>
+                        </div>
+                        <div class="col-6">
+                            <button class="btn btn-primary btn-sm" onclick="downloadQR()">
+                                <i class="fas fa-download"></i> Tải QR Code
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- QR Code Generator với fallback -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js" 
+            onerror="loadBackupQRCode()"></script>
+    
+    <script>
+        // Backup loader nếu CDN chính không hoạt động
+        function loadBackupQRCode() {
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js';
+            script.onload = function() {
+                console.log('QRCode library loaded from backup CDN');
+                initQRCode();
+            };
+            script.onerror = function() {
+                console.log('Both CDNs failed, using online service');
+                initQRCode();
+            };
+            document.head.appendChild(script);
+        }
+    </script>
+    
+    <script>
+        function initQRCode() {
+            const qrCodeDiv = document.getElementById('qrcode');
+            const url = '@ViewBag.MenuUrl';
+            
+            if (typeof QRCode !== 'undefined') {
+                // Tạo QR Code
+                QRCode.toCanvas(url, {
+                    width: 300,
+                    height: 300,
+                    margin: 2,
+                    color: {
+                        dark: '#000000',
+                        light: '#FFFFFF'
+                    }
+                }, function (err, canvas) {
+                    if (err) {
+                        console.error(err);
+                        qrCodeDiv.innerHTML = '<div class="alert alert-danger">Không thể tạo QR Code</div>';
+                    } else {
+                        canvas.style.border = '2px solid #ddd';
+                        canvas.style.borderRadius = '10px';
+                        qrCodeDiv.appendChild(canvas);
+                        
+                        // Lưu canvas để download
+                        window.qrCanvas = canvas;
+                    }
+                });
+            } else {
+                // Fallback: Hiển thị URL dạng text và sử dụng service online
+                qrCodeDiv.innerHTML = `
+                    <div class="text-center">
+                        <p class="text-warning">Đang tải thư viện QR Code...</p>
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}" 
+                             alt="QR Code" class="img-fluid" style="border: 2px solid #ddd; border-radius: 10px;">
+                        <p class="mt-2"><small>QR Code được tạo bởi dịch vụ online</small></p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Thử load QR code khi trang sẵn sàng
+        document.addEventListener('DOMContentLoaded', function() {
+            // Đợi một chút để đảm bảo script đã load hoặc timeout
+            let attempts = 0;
+            const maxAttempts = 10;
+            
+            function tryInitQRCode() {
+                attempts++;
+                if (typeof QRCode !== 'undefined') {
+                    initQRCode();
+                } else if (attempts < maxAttempts) {
+                    setTimeout(tryInitQRCode, 200);
+                } else {
+                    console.log('QRCode library failed to load, using fallback');
+                    initQRCode();
+                }
+            }
+            
+            tryInitQRCode();
+        });
+        
+        function downloadQR() {
+            if (window.qrCanvas) {
+                // Download từ canvas tự tạo
+                const link = document.createElement('a');
+                link.download = 'menu-qr-@(ViewBag.TenPhong).png';
+                link.href = window.qrCanvas.toDataURL();
+                link.click();
+            } else {
+                // Download từ service online
+                const url = '@ViewBag.MenuUrl';
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`;
+                const link = document.createElement('a');
+                link.download = 'menu-qr-@(ViewBag.TenPhong).png';
+                link.href = qrUrl;
+                link.target = '_blank';
+                link.click();
+            }
+        }
+    </script>
+} 

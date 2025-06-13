@@ -1,0 +1,518 @@
+@model IEnumerable<NhaNghiYenNhi.Models.Phong>
+@{
+    ViewData["Title"] = "Quản Lý Danh Sách Phòng";
+}
+
+<div class="container-fluid animate__animated animate__fadeIn">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-list"></i> Quản Lý Danh Sách Phòng</h2>
+        <div>
+            <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#loaiPhongModal">
+                <i class="fas fa-tags"></i> Quản Lý Loại Phòng
+            </button>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#themPhongModal">
+                <i class="fas fa-plus"></i> Thêm Phòng Mới
+            </button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Tên Phòng</th>
+                            <th>Loại Phòng</th>
+                            <th>Vị Trí</th>
+                            <th>Trạng Thái</th>
+                            <th>Thao Tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var phong in Model)
+                        {
+                            <tr>
+                                <td>@phong.TenPhong</td>
+                                <td>@(phong.IdLoaiPhongMacDinhNavigation?.TenLoai ?? "Chưa có")</td>
+                                <td>@phong.ViTri</td>
+                                <td>
+                                    @{
+                                        string trangThai = phong.TrangThai switch
+                                        {
+                                            1 => "Đang thuê",
+                                            2 => "Trống",
+                                            3 => "Đang dọn dẹp",
+                                            _ => "Không xác định"
+                                        };
+                                        string badgeClass = phong.TrangThai switch
+                                        {
+                                            1 => "badge bg-danger",
+                                            2 => "badge bg-success",
+                                            3 => "badge bg-warning",
+                                            _ => "badge bg-secondary"
+                                        };
+                                    }
+                                    <span class="@badgeClass">@trangThai</span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-info me-2" onclick="suaPhong(@phong.Id)">
+                                        <i class="fas fa-edit"></i> Sửa
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" onclick="xoaPhong(@phong.Id)">
+                                        <i class="fas fa-trash"></i> Xóa
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Thêm/Sửa Phòng -->
+<div class="modal fade" id="themPhongModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Thêm Phòng Mới</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="themPhongForm">
+                    <input type="hidden" id="phongId">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Tên Phòng <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="tenPhong" required 
+                                       placeholder="Ví dụ: P101, Phòng VIP 01">
+                                <div class="form-text">Tên phòng phải là duy nhất</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Vị Trí <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="viTri" required min="1"
+                                       placeholder="Số thứ tự vị trí">
+                                <div class="form-text">Vị trí phòng trong dãy (1, 2, 3...)</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Loại Phòng <span class="text-danger">*</span></label>
+                                <select class="form-select" id="idLoaiPhong" required>
+                                    <option value="">-- Chọn loại phòng --</option>
+                                </select>
+                                <div class="form-text">Chọn loại phòng phù hợp</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Trạng Thái <span class="text-danger">*</span></label>
+                                <select class="form-select" id="trangThai" required>
+                                    <option value="">-- Chọn trạng thái --</option>
+                                    <option value="1">Đang thuê</option>
+                                    <option value="2" selected>Trống</option>
+                                    <option value="3">Đang dọn dẹp</option>
+                                </select>
+                                <div class="form-text">Trạng thái hiện tại của phòng</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Lưu ý:</strong> Tất cả các trường có dấu (<span class="text-danger">*</span>) là bắt buộc.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Đóng
+                </button>
+                <button type="button" class="btn btn-primary" onclick="luuPhong()">
+                    <i class="fas fa-save"></i> <span id="btnSaveText">Lưu</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Quản Lý Loại Phòng -->
+<div class="modal fade" id="loaiPhongModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Quản Lý Loại Phòng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <button class="btn btn-primary mb-3" onclick="showThemLoaiPhong()">
+                    <i class="fas fa-plus"></i> Thêm Loại Phòng
+                </button>
+                <div id="formLoaiPhong" style="display: none;" class="mb-3">
+                    <form id="loaiPhongForm" class="border rounded p-3">
+                        <input type="hidden" id="loaiPhongId">
+                        <div class="mb-3">
+                            <label class="form-label">Tên Loại</label>
+                            <input type="text" class="form-control" id="tenLoai" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Giá Giờ Đầu</label>
+                            <input type="text" class="form-control" id="gioDau" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Giá Giờ Sau</label>
+                            <input type="text" class="form-control" id="gioSau" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Giá Qua Đêm</label>
+                            <input type="text" class="form-control" id="quaDem" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mô Tả</label>
+                            <input type="text" class="form-control" id="moTa">
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-primary" onclick="luuLoaiPhong()">Lưu</button>
+                            <button type="button" class="btn btn-secondary" onclick="huyThemLoaiPhong()">Hủy</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover" id="tableLoaiPhong">
+                        <thead>
+                            <tr>
+                                <th>Tên Loại</th>
+                                <th>Giờ Đầu</th>
+                                <th>Giờ Sau</th>
+                                <th>Qua Đêm</th>
+                                <th>Mô Tả</th>
+                                <th>Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        /* Modal scrolling fixes */
+        .modal-dialog {
+            max-height: 90vh;
+            margin: 1.75rem auto;
+        }
+
+        .modal-dialog-scrollable .modal-content {
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .modal-body {
+            max-height: 60vh;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        /* Specific fixes for large modals */
+        .modal-dialog.modal-lg {
+            max-height: 90vh;
+        }
+
+        .modal-dialog.modal-lg .modal-body {
+            max-height: 65vh;
+            overflow-y: auto;
+        }
+
+        /* Table responsiveness inside modals */
+        .modal-body .table-responsive {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+        }
+
+        /* Form scrolling inside modals */
+        .modal-body form {
+            max-height: 50vh;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        /* Custom scrollbar styling */
+        .modal-body::-webkit-scrollbar,
+        .table-responsive::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .modal-body::-webkit-scrollbar-track,
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb,
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 10px;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb:hover,
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* Ensure modal footer stays at bottom */
+        .modal-content {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-body {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .modal-footer {
+            flex-shrink: 0;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        let isEditing = false;
+        let loaiPhongList = [];
+
+        // Load danh sách loại phòng
+        async function loadLoaiPhong() {
+            try {
+                const response = await fetch('/api/loaiphong/danhsach');
+                loaiPhongList = await response.json();
+                
+                // Cập nhật select loại phòng
+                const select = document.getElementById('idLoaiPhong');
+                select.innerHTML = '<option value="">-- Chọn loại phòng --</option>' +
+                    loaiPhongList.map(lp => `<option value="${lp.id}">${lp.tenLoai}</option>`).join('');
+                
+                // Cập nhật bảng loại phòng
+                const tbody = document.querySelector('#tableLoaiPhong tbody');
+                tbody.innerHTML = loaiPhongList.map(lp => `
+                    <tr>
+                        <td>${lp.tenLoai}</td>
+                        <td>${formatCurrency(lp.gioDau)}đ</td>
+                        <td>${formatCurrency(lp.gioSau)}đ</td>
+                        <td>${formatCurrency(lp.quaDem)}đ</td>
+                        <td>${lp.moTa || ''}</td>
+                        <td>
+                            <button class="btn btn-sm btn-info me-2" onclick="suaLoaiPhong(${lp.id})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="xoaLoaiPhong(${lp.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading loai phong:', error);
+                toastr.error('Có lỗi xảy ra khi tải danh sách loại phòng');
+            }
+        }
+
+        function formatCurrency(value) {
+            if (!value) return '0';
+            return new Intl.NumberFormat('vi-VN').format(value);
+        }
+
+        // Phòng functions
+        async function luuPhong() {
+            // Validate form trước khi submit
+            if (!document.getElementById('themPhongForm').checkValidity()) {
+                document.getElementById('themPhongForm').reportValidity();
+                return;
+            }
+
+            const data = {
+                id: document.getElementById('phongId').value || 0,
+                tenPhong: document.getElementById('tenPhong').value.trim(),
+                idLoaiPhongMacDinh: parseInt(document.getElementById('idLoaiPhong').value),
+                viTri: parseInt(document.getElementById('viTri').value),
+                trangThai: parseInt(document.getElementById('trangThai').value)
+            };
+
+            try {
+                const response = await fetch('/api/phong/' + (isEditing ? 'capnhat' : 'them'), {
+                    method: isEditing ? 'PUT' : 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    toastr.success(isEditing ? 'Cập nhật phòng thành công' : 'Thêm phòng thành công');
+                    $('#themPhongModal').modal('hide');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    toastr.error(result.message || 'Có lỗi xảy ra');
+                }
+            } catch (error) {
+                toastr.error('Có lỗi xảy ra');
+            }
+        }
+
+        async function suaPhong(id) {
+            try {
+                const response = await fetch(`/api/phong/${id}`);
+                const result = await response.json();
+                if (result.success) {
+                    const phong = result.data;
+                    document.getElementById('phongId').value = phong.id;
+                    document.getElementById('tenPhong').value = phong.tenPhong;
+                    document.getElementById('idLoaiPhong').value = phong.idLoaiPhongMacDinh || '';
+                    document.getElementById('viTri').value = phong.viTri || '';
+                    document.getElementById('trangThai').value = phong.trangThai || 2;
+                    
+                    isEditing = true;
+                    $('.modal-title').text('Sửa Thông Tin Phòng');
+                    $('#btnSaveText').text('Cập nhật');
+                    $('#themPhongModal').modal('show');
+                } else {
+                    toastr.error('Không thể tải thông tin phòng');
+                }
+            } catch (error) {
+                toastr.error('Có lỗi xảy ra');
+            }
+        }
+
+        async function xoaPhong(id) {
+            if (!confirm('Bạn có chắc chắn muốn xóa phòng này?')) return;
+
+            try {
+                const response = await fetch(`/api/phong/xoa/${id}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    toastr.success('Xóa phòng thành công');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    toastr.error(result.message || 'Có lỗi xảy ra');
+                }
+            } catch (error) {
+                toastr.error('Có lỗi xảy ra');
+            }
+        }
+
+        // Loại phòng functions
+        function showThemLoaiPhong() {
+            document.getElementById('formLoaiPhong').style.display = 'block';
+            document.getElementById('loaiPhongForm').reset();
+            document.getElementById('loaiPhongId').value = '';
+            isEditing = false;
+        }
+
+        function huyThemLoaiPhong() {
+            document.getElementById('formLoaiPhong').style.display = 'none';
+            document.getElementById('loaiPhongForm').reset();
+        }
+
+        async function luuLoaiPhong() {
+            const data = {
+                id: document.getElementById('loaiPhongId').value || 0,
+                tenLoai: document.getElementById('tenLoai').value,
+                gioDau: document.getElementById('gioDau').value,
+                gioSau: document.getElementById('gioSau').value,
+                quaDem: document.getElementById('quaDem').value,
+                moTa: document.getElementById('moTa').value
+            };
+
+            try {
+                const response = await fetch('/api/loaiphong/' + (isEditing ? 'capnhat' : 'them'), {
+                    method: isEditing ? 'PUT' : 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    toastr.success(isEditing ? 'Cập nhật loại phòng thành công' : 'Thêm loại phòng thành công');
+                    huyThemLoaiPhong();
+                    await loadLoaiPhong();
+                } else {
+                    toastr.error(result.message || 'Có lỗi xảy ra');
+                }
+            } catch (error) {
+                toastr.error('Có lỗi xảy ra');
+            }
+        }
+
+        async function suaLoaiPhong(id) {
+            try {
+                const loaiPhong = loaiPhongList.find(lp => lp.id === id);
+                if (loaiPhong) {
+                    document.getElementById('loaiPhongId').value = loaiPhong.id;
+                    document.getElementById('tenLoai').value = loaiPhong.tenLoai;
+                    document.getElementById('gioDau').value = loaiPhong.gioDau;
+                    document.getElementById('gioSau').value = loaiPhong.gioSau;
+                    document.getElementById('quaDem').value = loaiPhong.quaDem;
+                    document.getElementById('moTa').value = loaiPhong.moTa || '';
+                    
+                    document.getElementById('formLoaiPhong').style.display = 'block';
+                    isEditing = true;
+                }
+            } catch (error) {
+                toastr.error('Có lỗi xảy ra');
+            }
+        }
+
+        async function xoaLoaiPhong(id) {
+            if (!confirm('Bạn có chắc chắn muốn xóa loại phòng này?')) return;
+
+            try {
+                const response = await fetch(`/api/loaiphong/xoa/${id}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    toastr.success('Xóa loại phòng thành công');
+                    await loadLoaiPhong();
+                } else {
+                    toastr.error(result.message || 'Có lỗi xảy ra');
+                }
+            } catch (error) {
+                toastr.error('Có lỗi xảy ra');
+            }
+        }
+
+        // Reset form khi đóng modal
+        $('#themPhongModal').on('hidden.bs.modal', function() {
+            document.getElementById('themPhongForm').reset();
+            document.getElementById('phongId').value = '';
+            document.getElementById('trangThai').value = '2'; // Reset về trạng thái "Trống"
+            isEditing = false;
+            $('.modal-title').text('Thêm Phòng Mới');
+            $('#btnSaveText').text('Lưu');
+        });
+
+        // Load dữ liệu khi trang được tải
+        $(document).ready(function() {
+            loadLoaiPhong();
+        });
+    </script>
+} 

@@ -1,0 +1,140 @@
+@model IEnumerable<NhaNghiYenNhi.Models.SanPhamNhaNghi>
+
+@{
+    ViewData["Title"] = "Menu Đặt Món";
+}
+
+<div class="container mt-4">
+    <h2 class="text-center mb-4">Menu Đặt Món</h2>
+    <div class="alert alert-info text-center">
+        <h5>📍 Phòng: @ViewBag.TenPhong</h5>
+        <small>Chọn món và số lượng, sau đó nhấn "Đặt Món" để gửi yêu cầu</small>
+    </div>
+    <div class="text-center mb-3">
+        <button class="btn btn-info btn-sm" onclick="playNotificationSound()">🔊 Test Âm Thanh</button>
+    </div>
+    <div class="row">
+        @foreach (var sp in Model)
+        {
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    @if (!string.IsNullOrEmpty(sp.HinhAnh))
+                    {
+                        <img src="~/img/@sp.HinhAnh" class="card-img-top" alt="@sp.TenSanPham">
+                    }
+                    <div class="card-body">
+                        <h5 class="card-title">@sp.TenSanPham</h5>
+                        <p class="card-text"><strong>Giá: </strong>@(sp.Gia?.ToString("N0") ?? "0") VNĐ</p>
+                        <div class="d-flex align-items-center">
+                            <div class="input-group me-2" style="width: 120px;">
+                                <button class="btn btn-outline-secondary" type="button" onclick="decreaseQuantity(this)">-</button>
+                                <input type="number" class="form-control text-center quantity-input" value="1" min="1" data-san-pham-id="@sp.Id">
+                                <button class="btn btn-outline-secondary" type="button" onclick="increaseQuantity(this)">+</button>
+                            </div>
+                            <button class="btn btn-primary" onclick="datMon(@sp.Id, this)">Đặt Món</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+
+        // Function tạo âm thanh thông báo
+        function playNotificationSound() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Tạo âm thanh thông báo nhiều tần số (như chuông)
+                const frequencies = [523.25, 659.25, 783.99]; // C5, E5, G5
+                
+                frequencies.forEach((freq, index) => {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
+                    oscillator.type = 'sine';
+                    
+                    const startTime = audioContext.currentTime + (index * 0.15);
+                    const duration = 0.3;
+                    
+                    gainNode.gain.setValueAtTime(0, startTime);
+                    gainNode.gain.linearRampToValueAtTime(0.2, startTime + 0.01);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+                    
+                    oscillator.start(startTime);
+                    oscillator.stop(startTime + duration);
+                });
+                
+            } catch (error) {
+                console.log('Không thể phát âm thanh:', error);
+                // Fallback: sử dụng beep đơn giản
+                try {
+                    const utterance = new SpeechSynthesisUtterance('📢 Thông báo đặt món');
+                    utterance.rate = 1.5;
+                    utterance.pitch = 1.2;
+                    utterance.volume = 0.5;
+                    speechSynthesis.speak(utterance);
+                } catch (e) {
+                    console.log('Speech synthesis không khả dụng');
+                    // Cuối cùng: tạo rung động nếu có thể
+                    if (navigator.vibrate) {
+                        navigator.vibrate([200, 100, 200]);
+                    }
+                }
+            }
+        }
+
+        function increaseQuantity(button) {
+            const input = button.parentElement.querySelector('.quantity-input');
+            input.value = parseInt(input.value) + 1;
+        }
+
+        function decreaseQuantity(button) {
+            const input = button.parentElement.querySelector('.quantity-input');
+            if (parseInt(input.value) > 1) {
+                input.value = parseInt(input.value) - 1;
+            }
+        }
+
+        function datMon(sanPhamId, button) {
+            const quantityInput = button.parentElement.querySelector('.quantity-input');
+            const soLuong = parseInt(quantityInput.value);
+            const phongId = @ViewBag.PhongId;
+
+            fetch('/Menu/DatMon', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                },
+                body: JSON.stringify({
+                    phongId: phongId,
+                    sanPhamId: sanPhamId,
+                    soLuong: soLuong
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert('Đã gửi yêu cầu đặt món!');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra khi đặt món!');
+            });
+        }
+    </script>
+} 

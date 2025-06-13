@@ -1,0 +1,343 @@
+@{
+    ViewData["Title"] = "Quản Lý Sản Phẩm";
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Quản Lý Sản Phẩm</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+    <style>
+        .product-container {
+            background: #fff;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .product-card {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .product-info {
+            padding: 15px;
+        }
+
+        .product-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .product-price {
+            color: #e74c3c;
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .search-container {
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        #addProductForm {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .preview-image {
+            max-width: 200px;
+            max-height: 200px;
+            margin-top: 10px;
+        }
+
+        .modal-body img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .btn-icon {
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-edit {
+            background-color: #3498db;
+            color: white;
+            border: none;
+        }
+
+        .btn-delete {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+        }
+
+        .btn-icon:hover {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h2 class="text-center mb-4">
+            <i class="fas fa-box"></i> Quản Lý Sản Phẩm
+        </h2>
+
+        <div class="product-container">
+            <button class="btn btn-primary mb-3" onclick="toggleAddForm()">
+                <i class="fas fa-plus"></i> Thêm Sản Phẩm Mới
+            </button>
+
+            <form id="addProductForm" style="display: none;" onsubmit="handleSubmit(event)">
+                <input type="hidden" id="productId">
+                <div class="form-group">
+                    <label>Tên sản phẩm:</label>
+                    <input type="text" id="tenSanPham" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Giá tiền:</label>
+                    <input type="number" id="giaTien" class="form-control" required min="0">
+                </div>
+                <div class="form-group">
+                    <label>Hình ảnh:</label>
+                    <input type="file" id="hinhAnh" class="form-control" accept="image/*" onchange="previewImage(event)">
+                    <img id="imagePreview" class="preview-image" style="display: none;">
+                </div>
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-save"></i> Lưu
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="toggleAddForm()">
+                    <i class="fas fa-times"></i> Hủy
+                </button>
+            </form>
+
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="Tìm kiếm sản phẩm..." oninput="searchProducts()">
+            </div>
+
+            <div id="productGrid" class="product-grid">
+                <!-- Products will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    @section Scripts {
+        <script>
+            let products = [];
+            let isEditing = false;
+
+            async function loadProducts(search = '') {
+                try {
+                    const response = await fetch(`/api/getsanpham?search=${encodeURIComponent(search)}`);
+                    products = await response.json();
+                    renderProducts();
+                } catch (error) {
+                    console.error('Error loading products:', error);
+                    toastr.error('Có lỗi xảy ra khi tải danh sách sản phẩm');
+                }
+            }
+
+            function renderProducts() {
+                const grid = document.getElementById('productGrid');
+                grid.innerHTML = products.map(product => `
+                    <div class="product-card animate__animated animate__fadeIn">
+                        <img src="/img/${product.hinhAnh}" class="product-image" onerror="this.src='/img/default.jpg'">
+                        <div class="product-info">
+                            <div class="product-title">${product.tenSanPham}</div>
+                            <div class="product-price">${formatCurrency(product.gia)}đ</div>
+                            <div class="action-buttons">
+                                <button class="btn-icon btn-edit" onclick="editProduct(${product.id})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn-icon btn-delete" onclick="deleteProduct(${product.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            function toggleAddForm() {
+                const form = document.getElementById('addProductForm');
+                form.style.display = form.style.display === 'none' ? 'block' : 'none';
+                if (form.style.display === 'none') {
+                    resetForm();
+                }
+            }
+
+            function resetForm() {
+                document.getElementById('productId').value = '';
+                document.getElementById('tenSanPham').value = '';
+                document.getElementById('giaTien').value = '';
+                document.getElementById('hinhAnh').value = '';
+                document.getElementById('imagePreview').style.display = 'none';
+                isEditing = false;
+            }
+
+            function previewImage(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const preview = document.getElementById('imagePreview');
+                        preview.src = e.target.result;
+                        preview.style.display = 'block';
+                    }
+                    reader.readAsDataURL(file);
+                }
+            }
+
+            async function handleSubmit(event) {
+                event.preventDefault();
+                
+                const formData = new FormData();
+                formData.append('TenSanPham', document.getElementById('tenSanPham').value);
+                formData.append('Gia', document.getElementById('giaTien').value);
+                
+                const fileInput = document.getElementById('hinhAnh');
+                if (fileInput.files.length > 0) {
+                    formData.append('HinhAnh', fileInput.files[0]);
+                }
+
+                const productId = document.getElementById('productId').value;
+                if (productId) {
+                    formData.append('Id', productId);
+                }
+
+                try {
+                    const response = await fetch(isEditing ? '/api/suasanpham' : '/api/themsanpham', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        toastr.success(isEditing ? 'Cập nhật sản phẩm thành công!' : 'Thêm sản phẩm thành công!');
+                        resetForm();
+                        toggleAddForm();
+                        await loadProducts();
+                    } else {
+                        toastr.error('Lỗi: ' + result.message);
+                    }
+                } catch (error) {
+                    toastr.error('Có lỗi xảy ra: ' + error.message);
+                }
+            }
+
+            async function editProduct(id) {
+                const product = products.find(p => p.id === id);
+                if (product) {
+                    document.getElementById('productId').value = product.id;
+                    document.getElementById('tenSanPham').value = product.tenSanPham;
+                    document.getElementById('giaTien').value = product.gia;
+                    
+                    if (product.hinhAnh) {
+                        const preview = document.getElementById('imagePreview');
+                        preview.src = `/img/${product.hinhAnh}`;
+                        preview.style.display = 'block';
+                    }
+
+                    isEditing = true;
+                    document.getElementById('addProductForm').style.display = 'block';
+                }
+            }
+
+            async function deleteProduct(id) {
+                if (!confirm('Bạn có chắc muốn xóa sản phẩm này?')) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/api/xoasanpham/${id}`, {
+                        method: 'DELETE'
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        toastr.success('Xóa sản phẩm thành công!');
+                        await loadProducts();
+                    } else {
+                        toastr.error('Lỗi: ' + result.message);
+                    }
+                } catch (error) {
+                    toastr.error('Có lỗi xảy ra: ' + error.message);
+                }
+            }
+
+            function searchProducts() {
+                const searchTerm = document.getElementById('searchInput').value;
+                loadProducts(searchTerm);
+            }
+
+            function formatCurrency(value) {
+                return new Intl.NumberFormat('vi-VN').format(value);
+            }
+
+            // Load products when page loads
+            document.addEventListener('DOMContentLoaded', () => {
+                loadProducts();
+            });
+        </script>
+    }
+</body>
+</html> 

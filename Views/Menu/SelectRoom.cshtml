@@ -1,0 +1,35 @@
+@model IEnumerable<NhaNghiYenNhi.Models.Phong>
+
+@{
+    ViewData["Title"] = "Chọn Phòng";
+}
+
+<div class="container mt-4">
+    <h2 class="text-center mb-4">Chọn Phòng Để Đặt Món</h2>
+    <div class="row">
+        @foreach (var phong in Model)
+        {
+            <div class="col-md-3 mb-3">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">@phong.TenPhong</h5>
+                        <p class="card-text">
+                            <span class="badge @(phong.TrangThai == 1 ? "bg-success" : "bg-secondary")">
+                                @(phong.TrangThai == 1 ? "Đang thuê" : "Trống")
+                            </span>
+                        </p>
+                        <a href="@Url.Action("Index", new { phongId = phong.Id })" 
+                           class="btn btn-primary btn-sm mb-2">
+                            <i class="fas fa-utensils"></i> Vào Menu
+                        </a>
+                        <br>
+                        <a href="@Url.Action("QRCode", new { phongId = phong.Id })" 
+                           class="btn btn-info btn-sm">
+                            <i class="fas fa-qrcode"></i> Tạo QR Code
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div> 

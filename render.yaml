@@ -1,0 +1,32 @@
+services:
+  # Web Service for the ASP.NET Core Application
+  - type: web
+    name: NhaNghiYenNhi
+    env: docker
+    plan: starter
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:10000
+      - key: ConnectionStrings__DefaultConnection
+        fromDatabase:
+          name: nha-nghi-db
+          property: connectionString
+      - key: GroqApiKey
+        value: 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
+      - key: AllowedHosts
+        value: "*"
+    autoDeploy: true
+
+  # PostgreSQL Database Service
+  - type: pserv
+    name: nha-nghi-db
+    env: docker
+    plan: starter
+    region: oregon
+    databases:
+      - name: nhanhiyennhi
+        user: nhanhiyennhi_user 

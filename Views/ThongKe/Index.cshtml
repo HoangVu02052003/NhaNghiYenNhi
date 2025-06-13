@@ -1,0 +1,284 @@
+@{
+    ViewData["Title"] = "Thống Kê Doanh Thu";
+}
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    .stats-card {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+        transition: transform 0.3s ease;
+    }
+
+    .stats-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .stats-icon {
+        font-size: 2rem;
+        margin-bottom: 10px;
+        color: #3498db;
+    }
+
+    .stats-title {
+        font-size: 1.1rem;
+        color: #7f8c8d;
+        margin-bottom: 5px;
+    }
+
+    .stats-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+
+    .filter-section {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+
+    .chart-container {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        margin-bottom: 30px;
+    }
+
+    .btn-filter {
+        border-radius: 20px;
+        padding: 8px 20px;
+        margin: 0 5px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-filter.active {
+        background-color: #3498db;
+        color: white;
+        border-color: #3498db;
+    }
+
+    .date-range-container {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+    }
+
+    .date-picker-wrapper {
+        position: relative;
+        flex: 1;
+    }
+
+    .date-picker-wrapper i {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+    }
+</style>
+
+<div class="container-fluid animate__animated animate__fadeIn">
+    <h2 class="mb-4">
+        <i class="fas fa-chart-line"></i> Thống Kê Doanh Thu
+    </h2>
+
+    <div class="filter-section">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="btn-group">
+                    <button type="button" class="btn btn-outline-primary btn-filter active" data-type="ngay">Ngày</button>
+                    <button type="button" class="btn btn-outline-primary btn-filter" data-type="tuan">Tuần</button>
+                    <button type="button" class="btn btn-outline-primary btn-filter" data-type="thang">Tháng</button>
+                    <button type="button" class="btn btn-outline-primary btn-filter" data-type="nam">Năm</button>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="date-range-container">
+                    <div class="date-picker-wrapper">
+                        <input type="text" class="form-control" id="fromDate" placeholder="Từ ngày">
+                        <i class="fas fa-calendar"></i>
+                    </div>
+                    <div class="date-picker-wrapper">
+                        <input type="text" class="form-control" id="toDate" placeholder="Đến ngày">
+                        <i class="fas fa-calendar"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="stats-card">
+                <div class="stats-icon">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+                <div class="stats-title">Tổng Doanh Thu</div>
+                <div class="stats-value" id="tongDoanhThu">0đ</div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="stats-card">
+                <div class="stats-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stats-title">Tổng Lượt Thuê</div>
+                <div class="stats-value" id="tongLuotThue">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <canvas id="revenueChart"></canvas>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let currentChart = null;
+        let currentType = 'ngay';
+
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('vi-VN').format(value);
+        }
+
+        async function loadData() {
+            try {
+                const fromDate = $('#fromDate').val();
+                const toDate = $('#toDate').val();
+                
+                let url = `/api/thongke/doanhthu?loaiThongKe=${currentType}`;
+                if (fromDate || toDate) {
+                    if (fromDate) url += `&fromDate=${moment(fromDate, 'DD/MM/YYYY').format()}`;
+                    if (toDate) url += `&toDate=${moment(toDate, 'DD/MM/YYYY').format()}`;
+                }
+
+                const response = await fetch(url);
+                const result = await response.json();
+
+                if (result.success) {
+                    updateChart(result.data);
+                    $('#tongDoanhThu').text(formatCurrency(result.tongDoanhThu) + 'đ');
+                    $('#tongLuotThue').text(formatCurrency(result.tongLuotThue));
+                } else {
+                    toastr.error('Lỗi: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+                toastr.error('Có lỗi xảy ra khi tải dữ liệu');
+            }
+        }
+
+        function updateChart(data) {
+            const ctx = document.getElementById('revenueChart').getContext('2d');
+            
+            if (currentChart) {
+                currentChart.destroy();
+            }
+
+            currentChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(item => item.ThoiGian),
+                    datasets: [
+                        {
+                            label: 'Doanh Thu',
+                            data: data.map(item => item.DoanhThu),
+                            backgroundColor: 'rgba(52, 152, 219, 0.5)',
+                            borderColor: 'rgba(52, 152, 219, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Số Lượt Thuê',
+                            data: data.map(item => item.SoLuotThue),
+                            backgroundColor: 'rgba(46, 204, 113, 0.5)',
+                            borderColor: 'rgba(46, 204, 113, 1)',
+                            borderWidth: 1,
+                            yAxisID: 'luotThue'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Doanh Thu (VNĐ)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrency(value) + 'đ';
+                                }
+                            }
+                        },
+                        luotThue: {
+                            beginAtZero: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Số Lượt Thuê'
+                            },
+                            grid: {
+                                drawOnChartArea: false
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.datasetIndex === 0) {
+                                        label += formatCurrency(context.parsed.y) + 'đ';
+                                    } else {
+                                        label += context.parsed.y;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            // Khởi tạo date picker
+            $('#fromDate, #toDate').datepicker({
+                format: 'dd/mm/yyyy',
+                language: 'vi',
+                autoclose: true,
+                todayHighlight: true
+            });
+
+            // Sự kiện click cho các nút filter
+            $('.btn-filter').click(function() {
+                $('.btn-filter').removeClass('active');
+                $(this).addClass('active');
+                currentType = $(this).data('type');
+                loadData();
+            });
+
+            // Sự kiện thay đổi ngày
+            $('#fromDate, #toDate').change(function() {
+                loadData();
+            });
+
+            // Load dữ liệu ban đầu
+            loadData();
+        });
+    </script>
+} 
