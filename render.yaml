@@ -12,17 +12,9 @@ services:
       - key: ASPNETCORE_URLS
         value: http://0.0.0.0:10000
       - key: ConnectionStrings__DefaultConnection
-        fromDatabase:
-          name: nha-nghi-db
-          property: connectionString
+        value: Host=localhost;Database=temp;Username=temp;Password=temp
       - key: GroqApiKey
         value: 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
       - key: AllowedHosts
         value: "*"
-    autoDeploy: true
-
-  # PostgreSQL Database Service  
-  - type: postgres
-    name: nha-nghi-db
-    plan: starter
-    region: oregon 
+    autoDeploy: true 
