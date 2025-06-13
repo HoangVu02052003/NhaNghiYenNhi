@@ -21,8 +21,8 @@ services:
         value: "*"
     autoDeploy: true
 
-  # PostgreSQL Database Service
-  - type: pserv
+  # PostgreSQL Database Service  
+  - type: postgres
     name: nha-nghi-db
     plan: starter
     region: oregon 
