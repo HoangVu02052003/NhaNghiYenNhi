@@ -11,8 +11,8 @@ services:
         value: Production
       - key: ASPNETCORE_URLS
         value: http://0.0.0.0:10000
-      - key: ConnectionStrings__DefaultConnection
-        value: Host=localhost;Database=temp;Username=temp;Password=temp
+      - key: SqliteConnection
+        value: Data Source=nhanghi.db
       - key: GroqApiKey
         value: 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
       - key: AllowedHosts
